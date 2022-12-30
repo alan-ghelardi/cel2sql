@@ -4,18 +4,22 @@ go 1.18
 
 require (
 	github.com/google/cel-go v0.12.5
-	github.com/tektoncd/results v0.4.0
+	github.com/google/go-cmp v0.5.9
+	github.com/tektoncd/results v0.4.1-0.20221224012749-cf0eec71fe7c
+	google.golang.org/genproto v0.0.0-20221201204527-e3fa12d562f3
+	gorm.io/gorm v1.24.2
 )
 
 require (
 	github.com/antlr/antlr4/runtime/Go/antlr v0.0.0-20220418222510-f25a4f6275ed // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
-	github.com/google/go-cmp v0.5.9 // indirect
+	github.com/grpc-ecosystem/grpc-gateway/v2 v2.14.0 // indirect
+	github.com/jinzhu/inflection v1.0.0 // indirect
+	github.com/jinzhu/now v1.1.5 // indirect
 	github.com/stoewer/go-strcase v1.2.0 // indirect
-	golang.org/x/net v0.0.0-20211101193420-4a448f8816b3 // indirect
-	golang.org/x/sys v0.0.0-20211025201205-69cdffdb9359 // indirect
-	golang.org/x/text v0.3.7 // indirect
-	google.golang.org/genproto v0.0.0-20220502173005-c8bf987b8c21 // indirect
-	google.golang.org/grpc v1.46.0 // indirect
-	google.golang.org/protobuf v1.28.0 // indirect
+	golang.org/x/net v0.2.0 // indirect
+	golang.org/x/sys v0.2.0 // indirect
+	golang.org/x/text v0.4.0 // indirect
+	google.golang.org/grpc v1.51.0 // indirect
+	google.golang.org/protobuf v1.28.1 // indirect
 )

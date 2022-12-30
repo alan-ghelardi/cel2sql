@@ -9,7 +9,7 @@ import (
 	resultspb "github.com/tektoncd/results/proto/v1alpha2/results_go_proto"
 )
 
-func TestInterprete(t *testing.T) {
+func TestInterpreteRecordExpressions(t *testing.T) {
 	tests := []struct {
 		name string
 		in   string
@@ -91,6 +91,56 @@ func TestInterprete(t *testing.T) {
 		cel.Declarations(decls.NewVar("name", decls.String)),
 		cel.Declarations(decls.NewVar("data_type", decls.String)),
 		cel.Declarations(decls.NewVar("data", decls.Any)),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			ast, issues := env.Compile(test.in)
+			if issues != nil && issues.Err() != nil {
+				t.Fatal(issues.Err())
+			}
+
+			interpreter, err := New(ast)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			got, err := interpreter.Interpret()
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if diff := cmp.Diff(test.want, got); diff != "" {
+				t.Errorf("Mismatch (-want +got):\n%s", diff)
+			}
+		})
+	}
+}
+
+func TestInterpreteResultExpressions(t *testing.T) {
+	tests := []struct {
+		name string
+		in   string
+		want string
+	}{{
+		name: "Result.Summary.Record field",
+		in:   `summary.record == "foo/results/bar/records/baz"`,
+		want: "recordsummary_record = 'foo/results/bar/records/baz'",
+	},
+		{
+			name: "Result.Summary.StartTime field",
+			in:   `summary.start_time > timestamp("2022/10/30T21:45:00.000Z")`,
+			want: "recordsummary_start_time > '2022/10/30T21:45:00.000Z'::TIMESTAMP WITH TIME ZONE",
+		},
+	}
+
+	env, err := cel.NewEnv(
+		cel.Types(&resultspb.RecordSummary{}),
+		cel.Variable("summary",
+			cel.ObjectType("tekton.results.v1alpha2.RecordSummary")),
 	)
 	if err != nil {
 		t.Fatal(err)

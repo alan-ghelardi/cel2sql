@@ -159,18 +159,16 @@ func (i *Interpreter) interpretSelectExpr(id int64, expr *exprpb.Expr_SelectExpr
 		sortedFields[j] = fields[k]
 	}
 
-	firstField := sortedFields[0]
-	lastField := sortedFields[len(sortedFields)-1]
-
-	fmt.Fprintf(&i.query, "(%s->", firstField)
-	if len(sortedFields) > 2 {
-		for _, field := range sortedFields[1 : len(sortedFields)-1] {
-			fmt.Fprintf(&i.query, "'%s'->", field)
-		}
+	if i.isDyn(expr.SelectExpr.GetOperand()) {
+		i.translateToJSONAccessors(sortedFields)
+		return nil
 	}
-	fmt.Fprintf(&i.query, ">'%s')", lastField)
 
-	return nil
+	if i.isRecordSummary(expr.SelectExpr.GetOperand()) {
+		i.translateIntoRecordSummaryColum(sortedFields)
+		return nil
+	}
+	return fmt.Errorf("%w. %s: not recognized field.", i.unsupportedExprError(id, "select"), sortedFields[0])
 }
 
 func (i *Interpreter) interpretCallExpr(id int64, expr *exprpb.Expr_CallExpr) error {

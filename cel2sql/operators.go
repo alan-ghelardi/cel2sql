@@ -28,13 +28,15 @@ var (
 	}
 )
 
-// isUnaryOperator ...
+// isUnaryOperator returns true if the symbol in question is a CEL unary
+// operator.
 func isUnaryOperator(symbol string) bool {
 	_, found := unaryOperators[symbol]
 	return found
 }
 
-// isBinaryOperator ...
+// isBinaryOperator returns true if the symbol in question is a CEL binary
+// operator.
 func isBinaryOperator(symbol string) bool {
 	_, found := binaryOperators[symbol]
 	return found
