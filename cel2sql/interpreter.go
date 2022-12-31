@@ -51,7 +51,7 @@ func (i *Interpreter) InterpretExpr(expr *exprpb.Expr) error {
 	id := expr.Id
 	switch node := expr.ExprKind.(type) {
 	case *exprpb.Expr_ConstExpr:
-		return i.interpretConstExpr(id, node)
+		return i.interpretConstExpr(id, node.ConstExpr)
 
 	case *exprpb.Expr_IdentExpr:
 		return i.interpretIdentExpr(id, node)
@@ -91,39 +91,38 @@ func (i *Interpreter) unsupportedExprError(id int64, name string) error {
 	return fmt.Errorf("%w %s at line %d, column %d", ErrUnsupportedExpression, name, line, column)
 }
 
-func (i *Interpreter) interpretConstExpr(id int64, expr *exprpb.Expr_ConstExpr) error {
-	switch expr.ConstExpr.ConstantKind.(type) {
+func (i *Interpreter) interpretConstExpr(id int64, expr *exprpb.Constant) error {
+	switch expr.ConstantKind.(type) {
 
 	case *exprpb.Constant_NullValue:
 		i.query.WriteString("NULL")
 
 	case *exprpb.Constant_BoolValue:
-		if expr.ConstExpr.GetBoolValue() {
+		if expr.GetBoolValue() {
 			i.query.WriteString("TRUE")
 		} else {
 			i.query.WriteString("FALSE")
 		}
 
 	case *exprpb.Constant_Int64Value:
-		fmt.Fprintf(&i.query, "%d", expr.ConstExpr.GetInt64Value())
+		fmt.Fprintf(&i.query, "%d", expr.GetInt64Value())
 
 	case *exprpb.Constant_Uint64Value:
-		fmt.Fprintf(&i.query, "%d", expr.ConstExpr.GetInt64Value())
+		fmt.Fprintf(&i.query, "%d", expr.GetInt64Value())
 
 	case *exprpb.Constant_DoubleValue:
-		fmt.Fprintf(&i.query, "%f", expr.ConstExpr.GetDoubleValue())
+		fmt.Fprintf(&i.query, "%f", expr.GetDoubleValue())
 
 	case *exprpb.Constant_StringValue:
-		fmt.Fprintf(&i.query, "'%s'", expr.ConstExpr.GetStringValue())
-
-	case *exprpb.Constant_BytesValue:
+		fmt.Fprintf(&i.query, "'%s'", expr.GetStringValue())
 
 	case *exprpb.Constant_DurationValue:
-		fmt.Fprintf(&i.query, "'%d SECONDS'", expr.ConstExpr.GetDurationValue().Seconds)
+		fmt.Fprintf(&i.query, "'%d SECONDS'", expr.GetDurationValue().Seconds)
 
 	case *exprpb.Constant_TimestampValue:
-		timestamp := expr.ConstExpr.GetTimestampValue()
+		timestamp := expr.GetTimestampValue()
 		fmt.Fprintf(&i.query, "TIMESTAMP WITH TIME ZONE '%s'", timestamp.AsTime().Format(time.RFC3339))
+
 	default:
 		return i.unsupportedExprError(id, "constant")
 	}
@@ -132,6 +131,9 @@ func (i *Interpreter) interpretConstExpr(id int64, expr *exprpb.Expr_ConstExpr) 
 }
 
 func (i *Interpreter) interpretIdentExpr(id int64, expr *exprpb.Expr_IdentExpr) error {
+	if reference, found := i.checkedExpr.ReferenceMap[id]; found && reference.GetValue() != nil {
+		return i.interpretConstExpr(id, reference.GetValue())
+	}
 	i.query.WriteString(expr.IdentExpr.GetName())
 	return nil
 }

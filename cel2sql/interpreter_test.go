@@ -3,6 +3,8 @@ package cel2sql
 import (
 	"testing"
 
+	exprpb "google.golang.org/genproto/googleapis/api/expr/v1alpha1"
+
 	"github.com/google/cel-go/cel"
 	"github.com/google/cel-go/checker/decls"
 	"github.com/google/go-cmp/cmp"
@@ -135,9 +137,22 @@ func TestInterpreteResultExpressions(t *testing.T) {
 			in:   `summary.start_time > timestamp("2022/10/30T21:45:00.000Z")`,
 			want: "recordsummary_start_time > '2022/10/30T21:45:00.000Z'::TIMESTAMP WITH TIME ZONE",
 		},
+		{
+			name: "comparison with the PIPELINE_RUN const value",
+			in:   `summary.type == PIPELINE_RUN`,
+			want: "recordsummary_type = 'tekton.dev/v1beta1.PipelineRun'",
+		},
+		{
+			name: "comparison with the PIPELINE_RUN const value",
+			in:   `summary.type == TASK_RUN`,
+			want: "recordsummary_type = 'tekton.dev/v1beta1.TaskRun'",
+		},
 	}
 
 	env, err := cel.NewEnv(
+		cel.Declarations(newStringConst("PIPELINE_RUN", "tekton.dev/v1beta1.PipelineRun"),
+			newStringConst("TASK_RUN", "tekton.dev/v1beta1.TaskRun"),
+		),
 		cel.Types(&resultspb.RecordSummary{}),
 		cel.Variable("summary",
 			cel.ObjectType("tekton.results.v1alpha2.RecordSummary")),
@@ -168,4 +183,11 @@ func TestInterpreteResultExpressions(t *testing.T) {
 			}
 		})
 	}
+}
+
+// newStringConst is a helper to create a CEL string constant declaration.
+func newStringConst(name, value string) *exprpb.Decl {
+	return decls.NewConst(name,
+		&exprpb.Type{TypeKind: &exprpb.Type_Primitive{Primitive: exprpb.Type_STRING}},
+		&exprpb.Constant{ConstantKind: &exprpb.Constant_StringValue{StringValue: value}})
 }
