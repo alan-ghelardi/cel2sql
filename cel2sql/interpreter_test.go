@@ -147,12 +147,18 @@ func TestInterpreteResultExpressions(t *testing.T) {
 			in:   `summary.type == TASK_RUN`,
 			want: "recordsummary_type = 'tekton.dev/v1beta1.TaskRun'",
 		},
+		{
+			name: "status constants",
+			in:   `summary.status == CANCELLED || summary.status == TIMEOUT`,
+			want: "recordsummary_status = 4  OR recordsummary_status = 3",
+		},
 	}
 
 	env, err := cel.NewEnv(
-		cel.Declarations(newStringConst("PIPELINE_RUN", "tekton.dev/v1beta1.PipelineRun"),
-			newStringConst("TASK_RUN", "tekton.dev/v1beta1.TaskRun"),
+		cel.Declarations(stringConst("PIPELINE_RUN", "tekton.dev/v1beta1.PipelineRun"),
+			stringConst("TASK_RUN", "tekton.dev/v1beta1.TaskRun"),
 		),
+		cel.Declarations(recordSummaryStatusConsts()...),
 		cel.Types(&resultspb.RecordSummary{}),
 		cel.Variable("summary",
 			cel.ObjectType("tekton.results.v1alpha2.RecordSummary")),
@@ -185,9 +191,19 @@ func TestInterpreteResultExpressions(t *testing.T) {
 	}
 }
 
-// newStringConst is a helper to create a CEL string constant declaration.
-func newStringConst(name, value string) *exprpb.Decl {
+// stringConst is a helper to create a CEL string constant declaration.
+func stringConst(name, value string) *exprpb.Decl {
 	return decls.NewConst(name,
-		&exprpb.Type{TypeKind: &exprpb.Type_Primitive{Primitive: exprpb.Type_STRING}},
+		decls.String,
 		&exprpb.Constant{ConstantKind: &exprpb.Constant_StringValue{StringValue: value}})
+}
+
+// recordSummaryStatusConsts exposes the values of the RecordSummary_Status enum
+// as named constants.
+func recordSummaryStatusConsts() []*exprpb.Decl {
+	constants := make([]*exprpb.Decl, 0, len(resultspb.RecordSummary_Status_value))
+	for name, value := range resultspb.RecordSummary_Status_value {
+		constants = append(constants, decls.NewConst(name, decls.Int, &exprpb.Constant{ConstantKind: &exprpb.Constant_Int64Value{Int64Value: int64(value)}}))
+	}
+	return constants
 }
