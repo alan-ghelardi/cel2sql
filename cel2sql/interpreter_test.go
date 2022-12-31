@@ -143,12 +143,12 @@ func TestInterpreteResultExpressions(t *testing.T) {
 			want: "recordsummary_type = 'tekton.dev/v1beta1.PipelineRun'",
 		},
 		{
-			name: "comparison with the PIPELINE_RUN const value",
+			name: "comparison with the TASK_RUN const value",
 			in:   `summary.type == TASK_RUN`,
 			want: "recordsummary_type = 'tekton.dev/v1beta1.TaskRun'",
 		},
 		{
-			name: "status constants",
+			name: "RecordSummary_Status constants",
 			in:   `summary.status == CANCELLED || summary.status == TIMEOUT`,
 			want: "recordsummary_status = 4  OR recordsummary_status = 3",
 		},

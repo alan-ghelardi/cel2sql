@@ -65,14 +65,9 @@ func (i *Interpreter) InterpretExpr(expr *exprpb.Expr) error {
 	case *exprpb.Expr_ListExpr:
 		return i.interpretListExpr(id, node)
 
-	case *exprpb.Expr_StructExpr:
-		return i.unsupportedExprError(id, "struct")
-
-	case *exprpb.Expr_ComprehensionExpr:
-		return i.unsupportedExprError(id, "comprehension")
-
+	default:
+		return i.unsupportedExprError(id, "")
 	}
-	return nil
 }
 
 // unsupportedExprError attempts to return a descriptive error on why the
@@ -88,7 +83,11 @@ func (i *Interpreter) unsupportedExprError(id int64, name string) error {
 		}
 	}
 
-	return fmt.Errorf("%w %s at line %d, column %d", ErrUnsupportedExpression, name, line, column)
+	if name != "" {
+		name += " "
+	}
+
+	return fmt.Errorf("%w %sstatement at line %d, column %d", ErrUnsupportedExpression, name, line, column)
 }
 
 func (i *Interpreter) interpretConstExpr(id int64, expr *exprpb.Constant) error {
@@ -126,7 +125,6 @@ func (i *Interpreter) interpretConstExpr(id int64, expr *exprpb.Constant) error 
 	default:
 		return i.unsupportedExprError(id, "constant")
 	}
-
 	return nil
 }
 
@@ -170,6 +168,7 @@ func (i *Interpreter) interpretSelectExpr(id int64, expr *exprpb.Expr_SelectExpr
 		i.translateIntoRecordSummaryColum(sortedFields)
 		return nil
 	}
+
 	return fmt.Errorf("%w. %s: not recognized field.", i.unsupportedExprError(id, "select"), sortedFields[0])
 }
 
@@ -204,6 +203,7 @@ func (i *Interpreter) interpretBinaryCallExpr(expr *exprpb.Expr_CallExpr) error 
 		return err
 	}
 
+	// Implicit coercion
 	if i.isDyn(arg1) {
 		if err := i.coerceToTypeOf(arg2); err != nil {
 			return err
@@ -218,6 +218,7 @@ func (i *Interpreter) interpretBinaryCallExpr(expr *exprpb.Expr_CallExpr) error 
 		return err
 	}
 
+	// Implicit coercion
 	if i.isDyn(arg2) {
 		if err := i.coerceToTypeOf(arg1); err != nil {
 			return err
