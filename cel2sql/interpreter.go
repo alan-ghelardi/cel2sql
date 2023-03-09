@@ -181,6 +181,10 @@ func (i *Interpreter) interpretCallExpr(id int64, expr *exprpb.Expr_CallExpr) er
 		return i.interpretBinaryCallExpr(expr)
 	}
 
+	if isIndexOperator(function) {
+		return i.interpretIndexExpr(expr)
+	}
+
 	return i.interpretFunctionCallExpr(id, expr)
 }
 
@@ -196,9 +200,20 @@ func (i *Interpreter) interpretUnaryCallExpr(expr *exprpb.Expr_CallExpr) error {
 }
 
 func (i *Interpreter) interpretBinaryCallExpr(expr *exprpb.Expr_CallExpr) error {
-	sqlOperator := binaryOperators[expr.CallExpr.GetFunction()]
+	function := expr.CallExpr.GetFunction()
 	arg1 := expr.CallExpr.Args[0]
 	arg2 := expr.CallExpr.Args[1]
+
+	if mayBeTranslatedIntoJSONPathContainsExpression(arg1, function, arg2) {
+		return i.translateIntoJSONPathContainsExpression(arg1, arg2)
+	}
+
+	if mayBeTranslatedIntoJSONPathContainsExpression(arg2, function, arg1) {
+		return i.translateIntoJSONPathContainsExpression(arg2, arg1)
+	}
+
+	sqlOperator := binaryOperators[function]
+
 	if err := i.InterpretExpr(arg1); err != nil {
 		return err
 	}
@@ -226,6 +241,16 @@ func (i *Interpreter) interpretBinaryCallExpr(expr *exprpb.Expr_CallExpr) error 
 	}
 	i.query.WriteString(space)
 
+	return nil
+}
+
+func (i *Interpreter) interpretIndexExpr(expr *exprpb.Expr_CallExpr) error {
+	args := expr.CallExpr.GetArgs()
+	for _, arg := range args {
+		if err := i.InterpretExpr(arg); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 

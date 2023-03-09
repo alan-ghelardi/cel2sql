@@ -128,10 +128,15 @@ func TestInterpreteResultExpressions(t *testing.T) {
 		in   string
 		want string
 	}{{
-		name: "Result.Summary.Record field",
-		in:   `summary.record == "foo/results/bar/records/baz"`,
-		want: "recordsummary_record = 'foo/results/bar/records/baz'",
+		name: "Result.Annotations field",
+		in:   `annotations["repo"] == "tektoncd/results"`,
+		want: `annotations @> '{"repo":"tektoncd/results"}'::jsonb`,
 	},
+		{
+			name: "Result.Summary.Record field",
+			in:   `summary.record == "foo/results/bar/records/baz"`,
+			want: "recordsummary_record = 'foo/results/bar/records/baz'",
+		},
 		{
 			name: "Result.Summary.StartTime field",
 			in:   `summary.start_time > timestamp("2022/10/30T21:45:00.000Z")`,
@@ -152,6 +157,16 @@ func TestInterpreteResultExpressions(t *testing.T) {
 			in:   `summary.status == CANCELLED || summary.status == TIMEOUT`,
 			want: "recordsummary_status = 4  OR recordsummary_status = 3",
 		},
+		{
+			name: "Result.Summary.Annotations",
+			in:   `summary.annotations["branch"] == "main"`,
+			want: `recordsummary_annotations @> '{"branch":"main"}'::jsonb`,
+		},
+		{
+			name: "Result.Summary.Annotations",
+			in:   `"main" == summary.annotations["branch"]`,
+			want: `recordsummary_annotations @> '{"branch":"main"}'::jsonb`,
+		},
 	}
 
 	env, err := cel.NewEnv(
@@ -160,6 +175,7 @@ func TestInterpreteResultExpressions(t *testing.T) {
 		),
 		cel.Declarations(recordSummaryStatusConsts()...),
 		cel.Types(&resultspb.RecordSummary{}),
+		cel.Variable("annotations", cel.MapType(cel.StringType, cel.StringType)),
 		cel.Variable("summary",
 			cel.ObjectType("tekton.results.v1alpha2.RecordSummary")),
 	)
