@@ -41,7 +41,3 @@ func isBinaryOperator(symbol string) bool {
 	_, found := binaryOperators[symbol]
 	return found
 }
-
-func isIndexOperator(symbol string) bool {
-	return symbol == operators.Index
-}

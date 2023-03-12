@@ -204,11 +204,11 @@ func (i *Interpreter) interpretBinaryCallExpr(expr *exprpb.Expr_CallExpr) error 
 	arg1 := expr.CallExpr.Args[0]
 	arg2 := expr.CallExpr.Args[1]
 
-	if mayBeTranslatedIntoJSONPathContainsExpression(arg1, function, arg2) {
+	if i.mayBeTranslatedIntoJSONPathContainsExpression(arg1, function, arg2) {
 		return i.translateIntoJSONPathContainsExpression(arg1, arg2)
 	}
 
-	if mayBeTranslatedIntoJSONPathContainsExpression(arg2, function, arg1) {
+	if i.mayBeTranslatedIntoJSONPathContainsExpression(arg2, function, arg1) {
 		return i.translateIntoJSONPathContainsExpression(arg2, arg1)
 	}
 

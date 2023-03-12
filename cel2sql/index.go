@@ -7,11 +7,17 @@ import (
 	exprpb "google.golang.org/genproto/googleapis/api/expr/v1alpha1"
 )
 
-func mayBeTranslatedIntoJSONPathContainsExpression(arg1 *exprpb.Expr, function string, arg2 *exprpb.Expr) bool {
+func (i *Interpreter) mayBeTranslatedIntoJSONPathContainsExpression(arg1 *exprpb.Expr, function string, arg2 *exprpb.Expr) bool {
+	constExpr := arg2.GetConstExpr()
+	if constExpr == nil {
+		return false
+	}
+	if _, ok := constExpr.GetConstantKind().(*exprpb.Constant_StringValue); !ok {
+		return false
+	}
 	return isIndexExpr(arg1) &&
 		function == operators.Equals &&
-		arg2.GetConstExpr() != nil &&
-		arg2.GetConstExpr().GetConstantKind().(*exprpb.Constant_StringValue) != nil
+		!i.isDyn(arg1.GetCallExpr().Args[0])
 }
 
 func isIndexExpr(expr *exprpb.Expr) bool {
@@ -19,6 +25,10 @@ func isIndexExpr(expr *exprpb.Expr) bool {
 		return true
 	}
 	return false
+}
+
+func isIndexOperator(symbol string) bool {
+	return symbol == operators.Index
 }
 
 func (i *Interpreter) translateIntoJSONPathContainsExpression(arg1 *exprpb.Expr, arg2 *exprpb.Expr) error {
