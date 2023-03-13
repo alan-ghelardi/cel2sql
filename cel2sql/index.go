@@ -46,3 +46,11 @@ func (i *Interpreter) translateIntoJSONPathContainsExpression(arg1 *exprpb.Expr,
 
 	return nil
 }
+
+func (i *Interpreter) interpretIndexExpr(id int64, expr *exprpb.Expr_CallExpr) error {
+	args := expr.CallExpr.GetArgs()
+	if err := i.interpretSelectExpr(id, args[0].ExprKind.(*exprpb.Expr_SelectExpr), args[1]); err != nil {
+		return err
+	}
+	return nil
+}

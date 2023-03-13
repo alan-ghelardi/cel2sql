@@ -136,7 +136,7 @@ func (i *Interpreter) interpretIdentExpr(id int64, expr *exprpb.Expr_IdentExpr) 
 	return nil
 }
 
-func (i *Interpreter) interpretSelectExpr(id int64, expr *exprpb.Expr_SelectExpr) error {
+func (i *Interpreter) interpretSelectExpr(id int64, expr *exprpb.Expr_SelectExpr, additionalExprs ...*exprpb.Expr) error {
 	fields := []string{expr.SelectExpr.GetField()}
 
 	target := expr.SelectExpr.GetOperand()
@@ -154,22 +154,32 @@ func (i *Interpreter) interpretSelectExpr(id int64, expr *exprpb.Expr_SelectExpr
 		target = target.GetSelectExpr().GetOperand()
 	}
 
-	sortedFields := make([]string, len(fields))
-	for j, k := 0, len(fields)-1; j < len(sortedFields); j, k = j+1, k-1 {
-		sortedFields[j] = fields[k]
+	reversedFields := make([]string, len(fields))
+	for j, k := 0, len(fields)-1; j < len(reversedFields); j, k = j+1, k-1 {
+		reversedFields[j] = fields[k]
+	}
+
+	for _, node := range additionalExprs {
+		switch node.ExprKind.(type) {
+		case *exprpb.Expr_ConstExpr:
+			reversedFields = append(reversedFields, node.GetConstExpr().GetStringValue())
+
+		default:
+			return ErrUnsupportedExpression
+		}
 	}
 
 	if i.isDyn(expr.SelectExpr.GetOperand()) {
-		i.translateToJSONAccessors(sortedFields)
+		i.translateToJSONAccessors(reversedFields)
 		return nil
 	}
 
 	if i.isRecordSummary(expr.SelectExpr.GetOperand()) {
-		i.translateIntoRecordSummaryColum(sortedFields)
+		i.translateIntoRecordSummaryColum(reversedFields)
 		return nil
 	}
 
-	return fmt.Errorf("%w. %s: not recognized field.", i.unsupportedExprError(id, "select"), sortedFields[0])
+	return fmt.Errorf("%w. %s: not recognized field.", i.unsupportedExprError(id, "select"), reversedFields[0])
 }
 
 func (i *Interpreter) interpretCallExpr(id int64, expr *exprpb.Expr_CallExpr) error {
@@ -182,7 +192,7 @@ func (i *Interpreter) interpretCallExpr(id int64, expr *exprpb.Expr_CallExpr) er
 	}
 
 	if isIndexOperator(function) {
-		return i.interpretIndexExpr(expr)
+		return i.interpretIndexExpr(id, expr)
 	}
 
 	return i.interpretFunctionCallExpr(id, expr)
@@ -241,16 +251,6 @@ func (i *Interpreter) interpretBinaryCallExpr(expr *exprpb.Expr_CallExpr) error 
 	}
 	i.query.WriteString(space)
 
-	return nil
-}
-
-func (i *Interpreter) interpretIndexExpr(expr *exprpb.Expr_CallExpr) error {
-	args := expr.CallExpr.GetArgs()
-	for _, arg := range args {
-		if err := i.InterpretExpr(arg); err != nil {
-			return err
-		}
-	}
 	return nil
 }
 

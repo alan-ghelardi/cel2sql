@@ -41,6 +41,7 @@ func TestInterpreteRecordExpressions(t *testing.T) {
 		{
 			name: "index operator",
 			in:   `data.metadata.labels["foo"] == "bar"`,
+			want: "(data->'metadata'->'labels'->>'foo') = 'bar'",
 		},
 		{
 			name: "contains string function",
