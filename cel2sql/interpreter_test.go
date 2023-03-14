@@ -135,6 +135,11 @@ func TestInterpreteResultExpressions(t *testing.T) {
 			want: `annotations @> '{"repo":"tektoncd/results"}'::jsonb`,
 		},
 		{
+			name: "other operators involving the Result.Annotations field",
+			in:   `annotations["repo"].startsWith("tektoncd")`,
+			want: "annotations->>'repo' LIKE 'tektoncd' || '%'",
+		},
+		{
 			name: "Result.Summary.Record field",
 			in:   `summary.record == "foo/results/bar/records/baz"`,
 			want: "recordsummary_record = 'foo/results/bar/records/baz'",

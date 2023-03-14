@@ -8,7 +8,7 @@ import (
 	resultspb "github.com/tektoncd/results/proto/v1alpha2/results_go_proto"
 )
 
-//
+// NewResultsEnv creates a CEL program to build SQL filters for Result objects.
 func NewResultsEnv() (*cel.Env, error) {
 	return cel.NewEnv(
 		cel.Declarations(stringConst("PIPELINE_RUN", "tekton.dev/v1beta1.PipelineRun"),
@@ -22,7 +22,7 @@ func NewResultsEnv() (*cel.Env, error) {
 	)
 }
 
-// NewRecordsEnv ...
+// NewRecordsEnv creates a CEL program to build SQL filters for Record objects.
 func NewRecordsEnv() (*cel.Env, error) {
 	return cel.NewEnv(
 		cel.Types(&resultspb.Record{}),

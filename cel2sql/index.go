@@ -49,8 +49,17 @@ func (i *Interpreter) translateIntoJSONPathContainsExpression(arg1 *exprpb.Expr,
 
 func (i *Interpreter) interpretIndexExpr(id int64, expr *exprpb.Expr_CallExpr) error {
 	args := expr.CallExpr.GetArgs()
-	if err := i.interpretSelectExpr(id, args[0].ExprKind.(*exprpb.Expr_SelectExpr), args[1]); err != nil {
-		return err
+	if args[0].GetSelectExpr() != nil {
+		return i.interpretSelectExpr(id, args[0].ExprKind.(*exprpb.Expr_SelectExpr), args[1])
 	}
-	return nil
+	if args[0].GetIdentExpr() != nil {
+		if err := i.InterpretExpr(args[0]); err != nil {
+			return err
+		}
+
+		fmt.Fprintf(&i.query, "->>'%s'", args[1].GetConstExpr().GetStringValue())
+
+		return nil
+	}
+	return i.unsupportedExprError(args[1].Id, "index")
 }
