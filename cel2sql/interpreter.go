@@ -132,7 +132,12 @@ func (i *Interpreter) interpretIdentExpr(id int64, expr *exprpb.Expr_IdentExpr) 
 	if reference, found := i.checkedExpr.ReferenceMap[id]; found && reference.GetValue() != nil {
 		return i.interpretConstExpr(id, reference.GetValue())
 	}
-	i.query.WriteString(expr.IdentExpr.GetName())
+	name := expr.IdentExpr.GetName()
+	if name == "data_type" {
+		// This field maps to the records.type column.
+		name = "type"
+	}
+	i.query.WriteString(name)
 	return nil
 }
 

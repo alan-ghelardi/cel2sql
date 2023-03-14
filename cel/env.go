@@ -8,11 +8,16 @@ import (
 	resultspb "github.com/tektoncd/results/proto/v1alpha2/results_go_proto"
 )
 
+const (
+	typePipelineRun = "tekton.dev/v1beta1.PipelineRun"
+	typeTaskRun     = "tekton.dev/v1beta1.TaskRun"
+)
+
 // NewResultsEnv creates a CEL program to build SQL filters for Result objects.
 func NewResultsEnv() (*cel.Env, error) {
 	return cel.NewEnv(
-		cel.Declarations(stringConst("PIPELINE_RUN", "tekton.dev/v1beta1.PipelineRun"),
-			stringConst("TASK_RUN", "tekton.dev/v1beta1.TaskRun"),
+		cel.Declarations(stringConst("PIPELINE_RUN", typePipelineRun),
+			stringConst("TASK_RUN", typeTaskRun),
 		),
 		cel.Declarations(recordSummaryStatusConsts()...),
 		cel.Types(&resultspb.RecordSummary{}),
@@ -25,7 +30,9 @@ func NewResultsEnv() (*cel.Env, error) {
 // NewRecordsEnv creates a CEL program to build SQL filters for Record objects.
 func NewRecordsEnv() (*cel.Env, error) {
 	return cel.NewEnv(
-		cel.Types(&resultspb.Record{}),
+		cel.Declarations(stringConst("PIPELINE_RUN", typePipelineRun),
+			stringConst("TASK_RUN", typeTaskRun),
+		),
 		cel.Declarations(decls.NewVar("name", decls.String)),
 		cel.Declarations(decls.NewVar("data_type", decls.String)),
 		cel.Declarations(decls.NewVar("data", decls.Any)),

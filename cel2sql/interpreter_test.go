@@ -88,6 +88,11 @@ func TestInterpreteRecordExpressions(t *testing.T) {
 			in:   `data.metadata.name.startsWith("bar")`,
 			want: "(data->'metadata'->>'name') LIKE 'bar' || '%'",
 		},
+		{
+			name: "data_type field",
+			in: `data_type == PIPELINE_RUN`,
+want: "type = 'tekton.dev/v1beta1.PipelineRun'",
+		},
 	}
 
 	env, err := cel.NewRecordsEnv()
