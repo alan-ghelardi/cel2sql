@@ -7,7 +7,7 @@ import (
 	exprpb "google.golang.org/genproto/googleapis/api/expr/v1alpha1"
 )
 
-func (i *Interpreter) interpretFunctionCallExpr(id int64, expr *exprpb.Expr_CallExpr) error {
+func (i *interpreter) interpretFunctionCallExpr(id int64, expr *exprpb.Expr_CallExpr) error {
 	function := expr.CallExpr.GetFunction()
 	switch function {
 	case overloads.Contains:
@@ -45,20 +45,20 @@ func (i *Interpreter) interpretFunctionCallExpr(id int64, expr *exprpb.Expr_Call
 	return i.unsupportedExprError(id, fmt.Sprintf("`%s` function", function))
 }
 
-func (i *Interpreter) interpretContainsFunction(expr *exprpb.Expr_CallExpr) error {
+func (i *interpreter) interpretContainsFunction(expr *exprpb.Expr_CallExpr) error {
 	fmt.Fprintf(&i.query, "POSITION(")
-	if err := i.InterpretExpr(expr.CallExpr.Args[0]); err != nil {
+	if err := i.interpretExpr(expr.CallExpr.Args[0]); err != nil {
 		return err
 	}
 	fmt.Fprintf(&i.query, " IN ")
-	if err := i.InterpretExpr(expr.CallExpr.GetTarget()); err != nil {
+	if err := i.interpretExpr(expr.CallExpr.GetTarget()); err != nil {
 		return err
 	}
 	i.query.WriteString(") <> 0")
 	return nil
 }
 
-func (i *Interpreter) interpretStartsWithFunction(expr *exprpb.Expr_CallExpr) error {
+func (i *interpreter) interpretStartsWithFunction(expr *exprpb.Expr_CallExpr) error {
 	if err := i.translateIntoBinaryCall(expr, "LIKE"); err != nil {
 		return err
 	}
@@ -66,24 +66,24 @@ func (i *Interpreter) interpretStartsWithFunction(expr *exprpb.Expr_CallExpr) er
 	return nil
 }
 
-func (i *Interpreter) translateIntoBinaryCall(expr *exprpb.Expr_CallExpr, infixTerm string) error {
-	if err := i.InterpretExpr(expr.CallExpr.GetTarget()); err != nil {
+func (i *interpreter) translateIntoBinaryCall(expr *exprpb.Expr_CallExpr, infixTerm string) error {
+	if err := i.interpretExpr(expr.CallExpr.GetTarget()); err != nil {
 		return err
 	}
 	fmt.Fprintf(&i.query, " %s ", infixTerm)
-	if err := i.InterpretExpr(expr.CallExpr.Args[0]); err != nil {
+	if err := i.interpretExpr(expr.CallExpr.Args[0]); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func (i *Interpreter) translateIntoExtractFunctionCall(expr *exprpb.Expr_CallExpr, field string, decrementReturnValue bool) error {
+func (i *interpreter) translateIntoExtractFunctionCall(expr *exprpb.Expr_CallExpr, field string, decrementReturnValue bool) error {
 	if decrementReturnValue {
 		i.query.WriteString("(")
 	}
 	fmt.Fprintf(&i.query, "EXTRACT(%s FROM ", field)
-	if err := i.InterpretExpr(expr.CallExpr.GetTarget()); err != nil {
+	if err := i.interpretExpr(expr.CallExpr.GetTarget()); err != nil {
 		return err
 	}
 	if i.isDyn(expr.CallExpr.Target) {
@@ -96,8 +96,8 @@ func (i *Interpreter) translateIntoExtractFunctionCall(expr *exprpb.Expr_CallExp
 	return nil
 }
 
-func (i *Interpreter) interpretTimestampFunction(expr *exprpb.Expr_CallExpr) error {
-	if err := i.InterpretExpr(expr.CallExpr.Args[0]); err != nil {
+func (i *interpreter) interpretTimestampFunction(expr *exprpb.Expr_CallExpr) error {
+	if err := i.interpretExpr(expr.CallExpr.Args[0]); err != nil {
 		return err
 	}
 	i.query.WriteString("::TIMESTAMP WITH TIME ZONE")

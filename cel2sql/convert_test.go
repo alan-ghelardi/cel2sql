@@ -8,7 +8,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 )
 
-func TestInterpreteRecordExpressions(t *testing.T) {
+func TestConvertRecordExpressions(t *testing.T) {
 	tests := []struct {
 		name string
 		in   string
@@ -90,8 +90,8 @@ func TestInterpreteRecordExpressions(t *testing.T) {
 		},
 		{
 			name: "data_type field",
-			in: `data_type == PIPELINE_RUN`,
-want: "type = 'tekton.dev/v1beta1.PipelineRun'",
+			in:   `data_type == PIPELINE_RUN`,
+			want: "type = 'tekton.dev/v1beta1.PipelineRun'",
 		},
 	}
 
@@ -102,17 +102,7 @@ want: "type = 'tekton.dev/v1beta1.PipelineRun'",
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			ast, issues := env.Compile(test.in)
-			if issues != nil && issues.Err() != nil {
-				t.Fatal(issues.Err())
-			}
-
-			interpreter, err := New(ast)
-			if err != nil {
-				t.Fatal(err)
-			}
-
-			got, err := interpreter.Interpret()
+			got, err := Convert(env, test.in)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -124,7 +114,7 @@ want: "type = 'tekton.dev/v1beta1.PipelineRun'",
 	}
 }
 
-func TestInterpreteResultExpressions(t *testing.T) {
+func TestConvertResultExpressions(t *testing.T) {
 	tests := []struct {
 		name string
 		in   string
@@ -193,17 +183,7 @@ func TestInterpreteResultExpressions(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			ast, issues := env.Compile(test.in)
-			if issues != nil && issues.Err() != nil {
-				t.Fatal(issues.Err())
-			}
-
-			interpreter, err := New(ast)
-			if err != nil {
-				t.Fatal(err)
-			}
-
-			got, err := interpreter.Interpret()
+			got, err := Convert(env, test.in)
 			if err != nil {
 				t.Fatal(err)
 			}

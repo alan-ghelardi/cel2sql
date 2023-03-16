@@ -18,36 +18,36 @@ const (
 // cannot be converted to a set of compatible SQL filters.
 var ErrUnsupportedExpression = errors.New("unsupported CEL")
 
-// Interpreter is a statefull converter of CEL expressions to equivalent SQL
+// interpreter is a statefull converter of CEL expressions to equivalent SQL
 // filters in the Postgres dialect.
-type Interpreter struct {
+type interpreter struct {
 	checkedExpr *exprpb.CheckedExpr
 
 	query strings.Builder
 }
 
-// New takes an abstract syntax tree and returns an Interpreter object capable
+// newInterpreter takes an abstract syntax tree and returns an Interpreter object capable
 // of converting it to a set of SQL filters.
-func New(ast *cel.Ast) (*Interpreter, error) {
+func newInterpreter(ast *cel.Ast) (*interpreter, error) {
 	checkedExpr, err := cel.AstToCheckedExpr(ast)
 	if err != nil {
 		return nil, err
 	}
-	return &Interpreter{
+	return &interpreter{
 		checkedExpr: checkedExpr,
 	}, nil
 }
 
-// Interpret attempts to convert the CEL AST into a set of valid SQL filters. It
+// interpret attempts to convert the CEL AST into a set of valid SQL filters. It
 // returns an error if the conversion cannot be done.
-func (i *Interpreter) Interpret() (string, error) {
-	if err := i.InterpretExpr(i.checkedExpr.Expr); err != nil {
+func (i *interpreter) interpret() (string, error) {
+	if err := i.interpretExpr(i.checkedExpr.Expr); err != nil {
 		return "", err
 	}
 	return strings.TrimSpace(i.query.String()), nil
 }
 
-func (i *Interpreter) InterpretExpr(expr *exprpb.Expr) error {
+func (i *interpreter) interpretExpr(expr *exprpb.Expr) error {
 	id := expr.Id
 	switch node := expr.ExprKind.(type) {
 	case *exprpb.Expr_ConstExpr:
@@ -72,7 +72,7 @@ func (i *Interpreter) InterpretExpr(expr *exprpb.Expr) error {
 
 // unsupportedExprError attempts to return a descriptive error on why the
 // provided CEL expression could not be converted.
-func (i *Interpreter) unsupportedExprError(id int64, name string) error {
+func (i *interpreter) unsupportedExprError(id int64, name string) error {
 	sourceInfo := i.checkedExpr.SourceInfo
 	column := sourceInfo.Positions[id]
 	var line int32
@@ -90,7 +90,7 @@ func (i *Interpreter) unsupportedExprError(id int64, name string) error {
 	return fmt.Errorf("%w %sstatement at line %d, column %d", ErrUnsupportedExpression, name, line, column)
 }
 
-func (i *Interpreter) interpretConstExpr(id int64, expr *exprpb.Constant) error {
+func (i *interpreter) interpretConstExpr(id int64, expr *exprpb.Constant) error {
 	switch expr.ConstantKind.(type) {
 
 	case *exprpb.Constant_NullValue:
@@ -128,7 +128,7 @@ func (i *Interpreter) interpretConstExpr(id int64, expr *exprpb.Constant) error 
 	return nil
 }
 
-func (i *Interpreter) interpretIdentExpr(id int64, expr *exprpb.Expr_IdentExpr) error {
+func (i *interpreter) interpretIdentExpr(id int64, expr *exprpb.Expr_IdentExpr) error {
 	if reference, found := i.checkedExpr.ReferenceMap[id]; found && reference.GetValue() != nil {
 		return i.interpretConstExpr(id, reference.GetValue())
 	}
@@ -141,7 +141,7 @@ func (i *Interpreter) interpretIdentExpr(id int64, expr *exprpb.Expr_IdentExpr) 
 	return nil
 }
 
-func (i *Interpreter) interpretSelectExpr(id int64, expr *exprpb.Expr_SelectExpr, additionalExprs ...*exprpb.Expr) error {
+func (i *interpreter) interpretSelectExpr(id int64, expr *exprpb.Expr_SelectExpr, additionalExprs ...*exprpb.Expr) error {
 	fields := []string{expr.SelectExpr.GetField()}
 
 	target := expr.SelectExpr.GetOperand()
@@ -187,7 +187,7 @@ func (i *Interpreter) interpretSelectExpr(id int64, expr *exprpb.Expr_SelectExpr
 	return fmt.Errorf("%w. %s: not recognized field.", i.unsupportedExprError(id, "select"), reversedFields[0])
 }
 
-func (i *Interpreter) interpretCallExpr(id int64, expr *exprpb.Expr_CallExpr) error {
+func (i *interpreter) interpretCallExpr(id int64, expr *exprpb.Expr_CallExpr) error {
 	function := expr.CallExpr.GetFunction()
 	if isUnaryOperator(function) {
 		return i.interpretUnaryCallExpr(expr)
@@ -203,18 +203,18 @@ func (i *Interpreter) interpretCallExpr(id int64, expr *exprpb.Expr_CallExpr) er
 	return i.interpretFunctionCallExpr(id, expr)
 }
 
-func (i *Interpreter) interpretUnaryCallExpr(expr *exprpb.Expr_CallExpr) error {
+func (i *interpreter) interpretUnaryCallExpr(expr *exprpb.Expr_CallExpr) error {
 	sqlOperator := unaryOperators[expr.CallExpr.GetFunction()]
 	i.query.WriteString(sqlOperator)
 	i.query.WriteString(space)
-	if err := i.InterpretExpr(expr.CallExpr.Args[0]); err != nil {
+	if err := i.interpretExpr(expr.CallExpr.Args[0]); err != nil {
 		return err
 	}
 	i.query.WriteString(space)
 	return nil
 }
 
-func (i *Interpreter) interpretBinaryCallExpr(expr *exprpb.Expr_CallExpr) error {
+func (i *interpreter) interpretBinaryCallExpr(expr *exprpb.Expr_CallExpr) error {
 	function := expr.CallExpr.GetFunction()
 	arg1 := expr.CallExpr.Args[0]
 	arg2 := expr.CallExpr.Args[1]
@@ -229,7 +229,7 @@ func (i *Interpreter) interpretBinaryCallExpr(expr *exprpb.Expr_CallExpr) error 
 
 	sqlOperator := binaryOperators[function]
 
-	if err := i.InterpretExpr(arg1); err != nil {
+	if err := i.interpretExpr(arg1); err != nil {
 		return err
 	}
 
@@ -244,7 +244,7 @@ func (i *Interpreter) interpretBinaryCallExpr(expr *exprpb.Expr_CallExpr) error 
 	i.query.WriteString(sqlOperator)
 	i.query.WriteString(space)
 
-	if err := i.InterpretExpr(arg2); err != nil {
+	if err := i.interpretExpr(arg2); err != nil {
 		return err
 	}
 
@@ -259,11 +259,11 @@ func (i *Interpreter) interpretBinaryCallExpr(expr *exprpb.Expr_CallExpr) error 
 	return nil
 }
 
-func (i *Interpreter) interpretListExpr(id int64, expr *exprpb.Expr_ListExpr) error {
+func (i *interpreter) interpretListExpr(id int64, expr *exprpb.Expr_ListExpr) error {
 	elements := expr.ListExpr.GetElements()
 	i.query.WriteString("(")
 	for index, elem := range elements {
-		if err := i.InterpretExpr(elem); err != nil {
+		if err := i.interpretExpr(elem); err != nil {
 			return err
 		}
 		if index < len(elements)-1 {

@@ -6,7 +6,7 @@ import (
 
 // isDyn returns true if the provided expression is a CEL dyn type or false
 // otherwise.
-func (i *Interpreter) isDyn(expr *exprpb.Expr) bool {
+func (i *interpreter) isDyn(expr *exprpb.Expr) bool {
 	if theType, found := i.checkedExpr.TypeMap[expr.GetId()]; found {
 		if _, ok := theType.GetTypeKind().(*exprpb.Type_Dyn); ok {
 			return true
@@ -15,10 +15,10 @@ func (i *Interpreter) isDyn(expr *exprpb.Expr) bool {
 	return false
 }
 
-func (i *Interpreter) isRecordSummary(expr *exprpb.Expr) bool {
+func (i *interpreter) isRecordSummary(expr *exprpb.Expr) bool {
 	if theType, found := i.checkedExpr.TypeMap[expr.GetId()]; found {
 		if messageType := theType.GetMessageType(); messageType == "tekton.results.v1alpha2.RecordSummary" {
-						return true
+			return true
 		}
 	}
 	return false
@@ -37,7 +37,7 @@ func (i *Interpreter) isRecordSummary(expr *exprpb.Expr) bool {
 // the data field is a dyn type which maps to a jsonb in the Postgres
 // database. The implicit coercion casts the completionTime to a SQL timestamp
 // in the returned SQL filter.
-func (i *Interpreter) coerceToTypeOf(expr *exprpb.Expr) error {
+func (i *interpreter) coerceToTypeOf(expr *exprpb.Expr) error {
 	if theType, found := i.checkedExpr.TypeMap[expr.GetId()]; found {
 		switch theType.GetTypeKind().(type) {
 
@@ -49,7 +49,7 @@ func (i *Interpreter) coerceToTypeOf(expr *exprpb.Expr) error {
 	return ErrUnsupportedExpression
 }
 
-func (i *Interpreter) coerceWellKnownType(wellKnown exprpb.Type_WellKnownType) {
+func (i *interpreter) coerceWellKnownType(wellKnown exprpb.Type_WellKnownType) {
 	switch wellKnown {
 
 	case exprpb.Type_TIMESTAMP:
